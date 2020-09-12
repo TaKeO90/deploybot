@@ -11,6 +11,6 @@ WORKDIR /opt/bin/
 COPY --from=builder /go/src/deploybot/webhook/ .
 
 
-EXPOSE 4949/tcp
+EXPOSE 8080/tcp
 
 ENTRYPOINT ["./deploybot"]
