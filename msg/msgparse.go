@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// Message structure that represent a received message from telegram.
 type Message struct {
 	UpdateId int `json:"update_id"`
 	Msg      struct {
@@ -15,13 +16,6 @@ type Message struct {
 			Lastname  string `json:"last_name"`
 			Username  string `json:"username"`
 		} `json:"from"`
-		ChatC struct {
-			Id        int    `json:"id"`
-			Firstname string `json:"first_name"`
-			Lastname  string `json:"last_name"`
-			Username  string `json:"username"`
-			Type      string `json:"type"`
-		} `json:"chat"`
 		Date     int    `json:"date"`
 		Text     string `json:"text"`
 		Entities []struct {
@@ -32,6 +26,7 @@ type Message struct {
 	} `json:"message"`
 }
 
+// ParseJson unmarshal json that we get from webhook
 func ParseJson(data []byte) (Message, error) {
 	msg := new(Message)
 	err := json.Unmarshal(data, msg)
