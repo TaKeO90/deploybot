@@ -3,9 +3,15 @@ package botio
 import (
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/TaKeO90/deploybot/msg"
+)
+
+const (
+	sendMsgMethod string = "SendMessage"
 )
 
 var (
@@ -26,6 +32,7 @@ func getWebhookUpdates() ([]byte, int, error) {
 	return resBody, resp.StatusCode, nil
 }
 
+// ChanRes result that we get from the channel.
 type ChanRes struct {
 	Msg msg.Message
 	Err error
@@ -49,4 +56,35 @@ func GetUpdates(c chan ChanRes) {
 		result.Msg, result.Err = m, nil
 		c <- *result
 	}
+}
+
+// SendMessage structure that holds fields required for sending message.
+type SendMessage struct {
+	Chatid int
+	Text   string
+}
+
+func sendData(data url.Values, method string) (bool, error) {
+	resp, err := http.PostForm(apiurl+method, data)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == 200 {
+		return true, nil
+	}
+	return false, nil
+}
+
+// Send SendMessage's method for sending message returns true if everything
+// ok otherwhise it returns an error.
+func (s *SendMessage) Send() (bool, error) {
+	val := url.Values{"chat_id": {strconv.Itoa(s.Chatid)}, "text": {s.Text}}
+	isOk, err := sendData(val, sendMsgMethod)
+	if err != nil {
+		return false, err
+	}
+	if isOk {
+		return true, nil
+	}
+	return false, nil
 }
