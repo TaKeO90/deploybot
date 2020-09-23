@@ -11,9 +11,6 @@ const (
 	ERRCMDNOTFOUND string = "sorry this command is not available"
 )
 
-// COMMANDS supported commands add more commands here
-var COMMANDS = []string{"deploy", "getstat"}
-
 type Info struct {
 	fstname string
 	lstname string
