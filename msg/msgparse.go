@@ -41,24 +41,46 @@ func (m Message) GetupdateID() int {
 	return m.UpdateId
 }
 
+// SenderData
+type SenderData struct {
+	Id        int
+	IsBot     bool
+	Firstname string
+	Lastname  string
+	Username  string
+}
+
+// TextMsgData
+type TextMsgData struct {
+	Date     int
+	Text     string
+	Entities []Entity
+}
+
+// Entity
+type Entity struct {
+	Type   string
+	Offset int
+	Length int
+}
+
 // GetSenderData get the sender informations from Message.
-func (m Message) GetSenderData() map[string]interface{} {
-	resM := map[string]interface{}{
-		"Id":        m.Msg.From.Id,
-		"IsBot":     m.Msg.From.IsBot,
-		"firstname": m.Msg.From.Firstname,
-		"lastname":  m.Msg.From.Lastname,
-		"username":  m.Msg.From.Username,
-	}
-	return resM
+func (m Message) GetSenderData() SenderData {
+	id := m.Msg.From.Id
+	isBot := m.Msg.From.IsBot
+	firstname := m.Msg.From.Firstname
+	lastname := m.Msg.From.Lastname
+	username := m.Msg.From.Username
+	return *(&SenderData{id, isBot, firstname, lastname, username})
 }
 
 // GetTxtMsgData get text message information from Message.
-func (m Message) GetTxtMsgData() map[string]interface{} {
-	resT := map[string]interface{}{
-		"date":     m.Msg.Date,
-		"text":     m.Msg.Text,
-		"entities": m.Msg.Entities,
+func (m Message) GetTxtMsgData() TextMsgData {
+	var entities []Entity
+	date, text := m.Msg.Date, m.Msg.Text
+	for _, e := range m.Msg.Entities {
+		ent := &Entity{e.Type, e.Offset, e.Length}
+		entities = append(entities, *ent)
 	}
-	return resT
+	return *(&TextMsgData{date, text, entities})
 }
