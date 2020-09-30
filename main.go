@@ -5,52 +5,18 @@ import (
 
 	"github.com/TaKeO90/deploybot/botio"
 	"github.com/TaKeO90/deploybot/cmdhandler"
+	"github.com/TaKeO90/deploybot/logger"
 	"github.com/TaKeO90/deploybot/msg"
 )
 
-//TODO: log package logs info error into the bot log file.
+// MAIN PACKAGE ARTCHITECHTURE
+// - GET UPDATES FROM WEBHOOOK. [X]
+// - PARSE THOSE UPDATES IN A JSON FORMAT. [X]
+// - GIVE THE PARSED UPDATES TO THE COMMAND HANDLER. -> COMMAND HANDLER ANSWERS THE USER USING BOTIO PACKAGE. [X]
+// - GIVE THE PARSED UPDATES TO THE LOGGER. [X]
+// - NEED SERVICE (DEPLOY SERVICE & GET STATS OF THE DEPLOYMENT)[ ]
 
 var updateid int = 0
-
-func main() {
-	c := make(chan botio.ChanRes)
-	for {
-		result, err := getWebhookUpdates(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-		//parse data that we get from the webhook
-		cData := getDataFromResult(result)
-		if cData.updateID != updateid {
-			cData.handleCmds()
-			updateid = cData.updateID
-		}
-	}
-}
-
-type clientData struct {
-	updateID    int
-	senderData  map[string]interface{}
-	textMsgData map[string]interface{}
-}
-
-func typeAssertClienData(t, fstN, lstN *string, id *int, text, firstname, lastname, Id interface{}) {
-	if firstname != nil || lastname != nil || Id != nil || text != nil {
-		*t, *fstN, *lstN, *id = text.(string), firstname.(string), lastname.(string), Id.(int)
-	}
-}
-
-func (c clientData) handleCmds() {
-	var (
-		text    string
-		fstname string
-		lstname string
-		id      int
-	)
-	typeAssertClienData(&text, &fstname, &lstname, &id, c.textMsgData["text"], c.senderData["firstname"], c.senderData["lastname"], c.senderData["Id"])
-	cmd := cmdhandler.NewCmd(text, fstname, lstname, id)
-	cmd.HandleCmd()
-}
 
 func getWebhookUpdates(c chan botio.ChanRes) (msg.Message, error) {
 	go botio.GetUpdates(c)
@@ -67,4 +33,48 @@ func getDataFromResult(message msg.Message) clientData {
 	cData.senderData = message.GetSenderData()
 	cData.textMsgData = message.GetTxtMsgData()
 	return *cData
+}
+
+type clientData struct {
+	updateID    int
+	senderData  msg.SenderData
+	textMsgData msg.TextMsgData
+}
+
+func (c clientData) handleCmds() error {
+	cmd := cmdhandler.NewCmd(c.textMsgData.Text, c.senderData)
+	err := cmd.HandleCmd()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	c := make(chan botio.ChanRes)
+	writer, err := logger.OpenLogFile()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer writer.Close()
+	for {
+		result, err := getWebhookUpdates(c)
+		if err != nil {
+			errLogger := logger.NewErrorLog(writer, err.Error())
+			errLogger.ErrLog()
+		}
+		//parse data that we get from the webhook
+		cData := getDataFromResult(result)
+		msgLogger := logger.NewMsgLog(writer, cData.senderData,
+			cData.textMsgData)
+		if cData.updateID != updateid {
+			err := cData.handleCmds()
+			msgLogger.MsgLog()
+			if err != nil {
+				errLogger := logger.NewErrorLog(writer, err.Error())
+				errLogger.ErrLog()
+			}
+			updateid = cData.updateID
+		}
+	}
 }
